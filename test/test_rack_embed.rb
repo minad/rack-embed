@@ -41,6 +41,26 @@ class TestRackEmbed < Test::Unit::TestCase
     assert_equal ['background: url(data:image/png;base64,aW1hZ2VfZGF0YQ==)'], esi_app.call('SCRIPT_NAME' => '', 'PATH_INFO' => '/', 'HTTP_USER_AGENT' => 'WebKit')[2]
   end
 
+  def test_threaded
+    app = Rack::URLMap.new({
+      '/'      => const([200, {'Content-Type' => 'text/css'}, ['background: url(/image)']]),
+      '/image' => const([200, {'Content-Type' => 'image/png'}, ['image_data']])
+    })
+
+    esi_app = Rack::Embed.new(app, :threaded => true)
+    assert_equal ['background: url(data:image/png;base64,aW1hZ2VfZGF0YQ==)'], esi_app.call('SCRIPT_NAME' => '', 'PATH_INFO' => '/', 'HTTP_USER_AGENT' => 'WebKit')[2]
+  end
+
+  def test_threaded_timeout
+    app = Rack::URLMap.new({
+      '/'      => const([200, {'Content-Type' => 'text/css'}, ['background: url(/image)']]),
+      '/image' => proc { sleep 2 }
+    })
+
+    esi_app = Rack::Embed.new(app, :threaded => true, :timeout => 1)
+    assert_equal ['background: url(/image)'], esi_app.call('SCRIPT_NAME' => '', 'PATH_INFO' => '/', 'HTTP_USER_AGENT' => 'WebKit')[2]
+  end
+
   def test_too_large
     app = Rack::URLMap.new({
       '/'      => const([200, {'Content-Type' => 'text/css'}, ['background: url(/image)']]),

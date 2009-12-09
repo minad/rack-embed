@@ -5,8 +5,10 @@ module Rack
   class Embed
     def initialize(app, opts = {})
       @app = app
-      @max_size = opts[:max_size] || 1024000
+      @max_size = opts[:max_size] || 1024
       @mime_types = opts[:mime_types] || %w(text/css application/xhtml+xml text/html)
+      @threaded = opts[:threaded] || false
+      @timeout = opts[:timeout] || 0.5
     end
 
     def call(env)
@@ -83,7 +85,17 @@ module Rack
                                   'REQUEST_METHOD' => 'GET',
                                   'QUERY_STRING' => query)
         inclusion_env.delete('rack.request')
-        status, header, body = @app.call(inclusion_env)
+
+        status, header, body = if @threaded
+                                 app = @app
+                                 result = nil
+                                 thread = Thread.new { result = app.call(inclusion_env) }
+                                 return src if !thread.join(@timeout)
+                                 result
+                               else
+                                 @app.call(inclusion_env)
+                               end
+
         type = content_type(header)
 
         return src if status != 200 || !type
@@ -98,7 +110,7 @@ module Rack
         body = [body].pack('m')
         body.gsub!("\n", '')
         "data:#{type};base64,#{body}"
-      rescue
+      rescue => ex
         src
       end
     end
