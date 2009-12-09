@@ -1,0 +1,9 @@
+LICENSE
+Rakefile
+test/test_rack_embed.rb
+test/test.image
+rack-embed.gemspec
+Manifest.txt
+lib/rack/embed.rb
+README.md
+
