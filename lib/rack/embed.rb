@@ -5,7 +5,7 @@ module Rack
   class Embed
     def initialize(app, opts = {})
       @app = app
-      @max_size = opts[:max_size] || 1024
+      @max_size = opts[:max_size] || 1024000
       @mime_types = opts[:mime_types] || %w(text/css application/xhtml+xml text/html)
     end
 
@@ -60,26 +60,22 @@ module Rack
 
     def get_image(env, src)
       return src if src =~ %r{^\w+://|^data:}
+      path = src.dup
       begin
-        if src[0..0] != '/'
-          path = env['PATH_INFO']
-          i = path.rindex('/')
-          src = path[0..i] + src
+        if path[0..0] != '/'
+          base = env['PATH_INFO']
+          i = base.rindex('/')
+          path = base[0..i] + path
         end
 
-        uri = env['REQUEST_URI'] || env['PATH_INFO']
-        i = uri.index('?')
-        uri = src + (i ? uri[i..-1] : '')
-
-        i = src.index('?')
+        query = ''
+        i = path.index('?')
         if i
-          path = src[0...i]
-          query = env['QUERY_STRING'] || ''
-          query += (query.empty? ? '' : '&') + src[i+1..-1]
-        else
-          path = src
-          query = env['QUERY_STRING']
+          query = path[i+1..-1]
+          path = path[0...i]
         end
+
+        uri = query && !query.empty? ? "#{path}?#{query}" : path
 
         inclusion_env = env.merge('PATH_INFO' => path,
                                   'REQUEST_PATH' => path,
