@@ -26,7 +26,7 @@ module Rack
 
       status, header, body = response
       body = css?(header) ? css_embed_images(body.first, original_env) : html_embed_images(body.first, original_env)
-      header['Content-Length'] = Rack::Utils.bytesize(body).to_s
+      header['Content-Length'] = body.bytesize.to_s
 
       [status, header, [body]]
     rescue Exception => ex
@@ -105,7 +105,7 @@ module Rack
         return src if body.respond_to?(:path) && ::File.size(body.path) > @max_size
 
         body = join_body(body)
-        return src if Rack::Utils.bytesize(body) > @max_size
+        return src if body.bytesize > @max_size
 
         body = [body].pack('m')
         body.gsub!("\n", '')
